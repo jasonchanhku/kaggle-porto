@@ -7,7 +7,7 @@ import gc
 
 # sklearn libs
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, GridSearchCV
 from sklearn.metrics import log_loss, roc_auc_score
 
 # logging and loading libs
@@ -47,34 +47,40 @@ if __name__ == '__main__':
     gc.collect()
     
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
-    list_auc_score = []
-    list_logloss_score = []
     
-    for train_idx, valid_idx in cv.split(x_train, y_train):
+    # All params of Logistic Regression
+    #LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+    #      intercept_scaling=1, max_iter=100, multi_class='ovr', n_jobs=1,
+    #      penalty='l2', random_state=None, solver='liblinear', tol=0.0001,
+    #      verbose=0, warm_start=False)
+    
+    all_params= {
         
-        trn_x = x_train.iloc[train_idx, :]
-        val_x = x_train.iloc[valid_idx, :]
+        'C': [10**i for i in range(-1, 2)],
+        'fit_intercept': [True, False],
+        'penalty': ['l2', 'l1'],
+        'random_state': [0]
         
-        trn_y = y_train.iloc[train_idx]
-        val_y = y_train.iloc[valid_idx]
-        
-        clf = LogisticRegression(random_state=0)
-        clf.fit(trn_x, trn_y)
-        pred = clf.predict_proba(val_x)[:, 1]
-        
-        sc_logloss = log_loss(val_y, pred)
-        sc_auc = roc_auc_score(val_y, pred)
-        
-        list_logloss_score.append(sc_logloss)
-        list_auc_score.append(sc_auc)
-        logger.debug('  logloss: {}, auc: {}'.format(sc_logloss, sc_auc))
-        
-    logger.info('Mean of CV: logloss: {}, auc: {}'.format(np.mean(list_logloss_score), np.mean(list_auc_score)))
+    }
+    
+    min_score = 100
+    min_params = None
+    
+    #kfolds = StratifiedKFold(5)
+    #clf = GridSearchCV(estimator, parameters, scoring=qwk, cv=kfolds.split(xtrain,ytrain))
+    #clf.fit(xtrain, ytrain)
 
     
-    logger.info('train end')
+    clf = GridSearchCV(LogisticRegression(), all_params, scoring = 'roc_auc', cv=cv.split(x_train, y_train))
+    clf.fit(x_train, y_train)
+    best_params = clf.best_params_
     
-    clf = LogisticRegression(random_state=0)
+    logger.info('CV results: {}'.format(clf.cv_results_))
+    logger.info('Best score: {}'.format(clf.best_score_))
+    logger.info('Best params: {}'.format(best_params))
+
+    
+    clf = LogisticRegression(**best_params)
     clf.fit(x_train, y_train)
 
     df = load_test_data()
