@@ -1,5 +1,3 @@
-# %load train.py
-
 # Data prep libs
 import pandas as pd
 import numpy as np
@@ -8,7 +6,7 @@ import gc
 # sklearn libs
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, GridSearchCV
-from sklearn.metrics import log_loss, roc_auc_score
+from sklearn.metrics import log_loss, roc_auc_score, roc_curve, auc
 
 # logging and loading libs
 from logging import StreamHandler, DEBUG, Formatter, FileHandler, getLogger
@@ -16,6 +14,12 @@ from load_data import load_test_data, load_train_data
 
 DIR = 'result_tmp/'
 logger = getLogger(__name__)
+
+def gini(y, pred):
+    fpr, tpr, thr = roc_curve(y, pred, pos_label=1)
+    # in short, maximizing AUC also maximizes gini
+    g = 2 * auc(fpr, tpr) - 1
+    
 
 if __name__ == '__main__':
 
@@ -63,8 +67,6 @@ if __name__ == '__main__':
         
     }
     
-    min_score = 100
-    min_params = None
     
     #kfolds = StratifiedKFold(5)
     #clf = GridSearchCV(estimator, parameters, scoring=qwk, cv=kfolds.split(xtrain,ytrain))
